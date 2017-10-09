@@ -7,12 +7,8 @@ import hudson.plugins.git.Branch;
 import hudson.plugins.git.GitException;
 import hudson.plugins.git.IndexEntry;
 import hudson.plugins.git.Revision;
-import java.io.File;
-import java.io.IOException;
-import java.io.FileNotFoundException;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
-import java.io.UnsupportedEncodingException;
+
+import java.io.*;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.util.ArrayList;
@@ -243,6 +239,109 @@ public class GitClientTest {
 
     private String randomEmail(String name) {
         return name.replaceAll(" ", ".") + "@middle.earth";
+    }
+
+    @Test
+    public void testBasicChangelog() throws Exception {
+
+        final String comp1File = "comp1/file.txt";
+        final String comp2File = "comp2/file.txt";
+
+        commitFile(
+                comp1File,
+                String.format("A random UUID: %s\n", UUID.randomUUID().toString()),
+                "First commit in comp1");
+
+        commitFile(
+                comp2File,
+                String.format("A random UUID: %s\n", UUID.randomUUID().toString()),
+                "First commit in comp2");
+
+        final ObjectId commitC = commitFile(
+                comp1File,
+                String.format("A random UUID: %s\n", UUID.randomUUID().toString()),
+                "Second commit in comp1");
+
+        ChangelogCommand changelog = gitClient.changelog();
+        StringWriter changelogStringWriter = new StringWriter();
+        changelog.includes(commitC).to(changelogStringWriter).execute();
+
+        assertThat(changelogStringWriter.toString(),
+                allOf(
+                        containsString("First commit in comp1"),
+                        containsString("Second commit in comp1"),
+                        containsString("First commit in comp2")));
+    }
+
+    @Test
+    public void testChangelogWithPath() throws Exception {
+
+        final String comp1File = "comp1/file.txt";
+        final String comp2File = "comp2/file.txt";
+
+        commitFile(
+                comp1File,
+                String.format("A random UUID: %s\n", UUID.randomUUID().toString()),
+                "First commit in comp1");
+
+        commitFile(
+                comp2File,
+                String.format("A random UUID: %s\n", UUID.randomUUID().toString()),
+                "First commit in comp2");
+
+        final ObjectId commitC = commitFile(
+                comp1File,
+                String.format("A random UUID: %s\n", UUID.randomUUID().toString()),
+                "Second commit in comp1");
+
+        ChangelogCommand changelog = gitClient.changelog();
+        StringWriter changelogStringWriter = new StringWriter();
+        changelog.includes(commitC).path("comp1").to(changelogStringWriter).execute();
+
+        assertThat(changelogStringWriter.toString(),
+                allOf(
+                        containsString("First commit in comp1"),
+                        containsString("Second commit in comp1"),
+                        not(containsString("First commit in comp2"))));
+    }
+
+    @Test
+    public void testChangelogWithMultiplePaths() throws Exception {
+
+        final String comp1File = "comp1/file.txt";
+        final String comp2File = "comp2/file.txt";
+        final String comp3File = "comp3/file.txt";
+
+        commitFile(
+                comp1File,
+                String.format("A random UUID: %s\n", UUID.randomUUID().toString()),
+                "First commit in comp1");
+
+        commitFile(
+                comp2File,
+                String.format("A random UUID: %s\n", UUID.randomUUID().toString()),
+                "First commit in comp2");
+
+        commitFile(
+                comp1File,
+                String.format("A random UUID: %s\n", UUID.randomUUID().toString()),
+                "Second commit in comp1");
+
+        final ObjectId commitD = commitFile(
+                comp3File,
+                String.format("A random UUID: %s\n", UUID.randomUUID().toString()),
+                "First commit in comp3");
+
+        ChangelogCommand changelog = gitClient.changelog();
+        StringWriter changelogStringWriter = new StringWriter();
+        changelog.includes(commitD).path("comp1").path("comp3").to(changelogStringWriter).execute();
+
+        assertThat(changelogStringWriter.toString(),
+                allOf(
+                        containsString("First commit in comp1"),
+                        containsString("Second commit in comp1"),
+                        containsString("First commit in comp3"),
+                        not(containsString("First commit in comp2"))));
     }
 
     @Test

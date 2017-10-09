@@ -853,6 +853,7 @@ public class CliGitAPIImpl extends LegacyCompatibleGitAPIImpl {
             /** Equivalent to the git-log raw format but using ISO 8601 date format - also prevent to depend on git CLI future changes */
             public static final String RAW = "commit %H%ntree %T%nparent %P%nauthor %aN <%aE> %ai%ncommitter %cN <%cE> %ci%n%n%w(76,4,4)%s%n%n%b";
             final List<String> revs = new ArrayList<>();
+            final List<String> paths = new ArrayList<>();
 
             Integer n = null;
             Writer out = null;
@@ -873,6 +874,12 @@ public class CliGitAPIImpl extends LegacyCompatibleGitAPIImpl {
 
             public ChangelogCommand includes(ObjectId rev) {
                 return includes(rev.name());
+            }
+
+            @Override
+            public ChangelogCommand path(String path) {
+                paths.add(path);
+                return this;
             }
 
             public ChangelogCommand to(Writer w) {
@@ -896,6 +903,8 @@ public class CliGitAPIImpl extends LegacyCompatibleGitAPIImpl {
                     args.add("-n").add(n);
                 for (String rev : this.revs)
                     args.add(rev);
+                for (String path : this.paths)
+                    args.add(path);
 
                 if (out==null)  throw new IllegalStateException();
 
